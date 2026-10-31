@@ -38,6 +38,10 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
             ],
         ],
     ),
+    "train-baseline": (
+        "Entraîne les baselines et affiche leurs métriques sur la validation",
+        [[PY, "-m", "churnguard.train"]],
+    ),
     "lint": ("Vérifie le style avec ruff", [[PY, "-m", "ruff", "check", "."]]),
     "format": (
         "Formate le code avec ruff",
