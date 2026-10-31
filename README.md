@@ -1,5 +1,7 @@
 # ChurnGuard
 
+[![CI](https://github.com/zakaech/churnguard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zakaech/churnguard/actions/workflows/ci.yml)
+
 Prédiction **et explication** du risque de départ (churn) des clients d'un opérateur télécom :
 un modèle de machine learning, une API FastAPI et une interface Streamlit, conteneurisés et
 testés en intégration continue.
