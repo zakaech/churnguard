@@ -20,3 +20,14 @@ py -3.12 -m venv .venv
 pip install -r requirements-dev.txt
 pip install -e .
 ```
+
+## Commandes
+
+```bash
+python tasks.py download        # télécharge les données (API Kaggle, ou instructions manuelles)
+python tasks.py data            # nettoie et découpe (train/val/test) vers data/processed/
+python tasks.py notebook        # ré-exécute le notebook d'exploration
+python tasks.py train-baseline  # entraîne les baselines, métriques sur la validation
+python tasks.py test            # tests pytest
+python tasks.py lint            # ruff
+```
