@@ -112,7 +112,7 @@ def main() -> None:
 
     df = generate(args.rows, args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(args.out, index=False)
+    df.to_csv(args.out, index=False, lineterminator="\n")
     print(f"{len(df)} lignes synthétiques écrites dans {args.out}")
     print(f"Taux de départ : {(df['Churn'] == 'Yes').mean():.2%}")
 
