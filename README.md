@@ -1,23 +1,85 @@
 # ChurnGuard
 
-Prédiction et explication du risque de départ (churn) des clients d'un opérateur télécom.
+Prédiction **et explication** du risque de départ (churn) des clients d'un opérateur télécom :
+un modèle de machine learning, une API FastAPI et une interface Streamlit, conteneurisés et
+testés en intégration continue.
 
-> Projet en cours de construction — README complet prévu en phase 5.
+| Résultat final (test, évalué une seule fois) | Valeur |
+|---|---|
+| Rappel (part des départs détectés) | **80,2 %** (objectif : ≥ 80 %) |
+| Précision (part des alertes justifiées) | 51,4 % |
+| ROC-AUC / PR-AUC | 0,844 / 0,653 |
+| Modèle | Random Forest réglé, seuil 0,2712 choisi sur la validation |
+
+## Problème métier
+
+Un opérateur télécom perd chaque mois une partie de ses clients ; dans ce jeu de données,
+**26,5 %** des clients sont partis. Retenir un client coûte moins cher qu'en conquérir un
+nouveau, mais une offre de fidélisation envoyée à tout le monde coûte cher. ChurnGuard
+répond à deux questions :
+
+1. **Qui risque de partir ?** Une probabilité de départ, une décision (signalé ou non) et un
+   niveau de risque (faible / moyen / élevé) pour chaque client.
+2. **Pourquoi ?** Les 5 facteurs principaux de chaque prédiction (SHAP), en langage clair :
+   « Contrat : au mois — augmente le risque (+11,6 points) ».
+
+L'objectif métier retenu : **détecter au moins 80 % des départs** en limitant au maximum les
+offres envoyées à tort.
+
+## Lancement en une commande (Docker)
+
+Prérequis : Docker, et le modèle entraîné dans `models/` (voir « Stockage du modèle »).
+
+```bash
+cp .env.example .env          # puis définir CHURNGUARD_API_KEY (clé d'API)
+docker compose up --build     # API + interface
+```
+
+- Interface : http://127.0.0.1:8501
+- API (documentation Swagger) : http://127.0.0.1:8000/docs — bouton « Authorize » pour la clé
+- Option : `docker compose --profile mlflow up --build` ajoute l'interface MLflow (port 5000)
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Utilisateur] -->|navigateur| UI[Interface Streamlit<br/>:8501]
+    UI -->|HTTP + X-API-Key<br/>réseau interne| API[API FastAPI<br/>:8000]
+    API --> M[(Modèle joblib<br/>pipeline + seuil<br/>monté en lecture seule)]
+    API --> S[SHAP<br/>facteurs explicatifs]
+    T[Entraînement<br/>tasks.py train] -->|MLflow| R[(mlflow.db<br/>expériences)]
+    T --> M
+```
+
+- L'interface **n'a jamais accès au modèle** : elle appelle l'API.
+- Le modèle (prétraitement + Random Forest + seuil) est un seul fichier, chargé une fois au
+  démarrage de l'API.
+- L'entraînement, MLflow et les notebooks restent hors des images Docker.
+
+## Captures d'écran
+
+> Emplacements prévus — captures à ajouter (dossier `docs/screenshots/`).
+
+| Page « Client » | Page « Import CSV » | Page « Analyse » | Swagger UI |
+|---|---|---|---|
+| `docs/screenshots/client.png` | `docs/screenshots/import_csv.png` | `docs/screenshots/analyse.png` | `docs/screenshots/swagger.png` |
 
 ## Données
 
 - Jeu de données : **Telco Customer Churn** (IBM), disponible sur Kaggle :
-  `blastchar/telco-customer-churn`.
-- Licence : **à compléter** (à vérifier sur la page Kaggle avant publication du dépôt).
-- Les données ne sont pas versionnées. Les tests utilisent un échantillon **synthétique**
-  (`tests/data/sample.csv`) généré par `scripts/make_synthetic_sample.py`.
+  `blastchar/telco-customer-churn` (7 043 clients, 21 colonnes).
+- Licence : **à compléter** (à vérifier sur la page Kaggle avant publication du dépôt, du
+  modèle ou d'une démo en ligne : le modèle est dérivé des données).
+- Les données ne sont pas versionnées. Les tests et la CI utilisent un échantillon
+  **synthétique** (`tests/data/sample.csv`, généré par `scripts/make_synthetic_sample.py`) :
+  aucune ligne réelle n'est publiée.
 
-## Installation
+## Installation (développement)
 
 ```bash
 py -3.12 -m venv .venv
 .venv\Scripts\activate          # Linux/macOS : source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c constraints.txt
 pip install -e .
 ```
 
@@ -28,11 +90,12 @@ python tasks.py download        # télécharge les données (API Kaggle, ou inst
 python tasks.py data            # nettoie et découpe (train/val/test) vers data/processed/
 python tasks.py notebook        # ré-exécute les notebooks (exploration, résultats)
 python tasks.py train-baseline  # entraîne les baselines, métriques sur la validation
-python tasks.py train           # compare les modèles, règle, choisit modèle + seuil, sauvegarde
+python tasks.py train           # compare, règle, choisit modèle + seuil (refusé si le test a été évalué)
 python tasks.py evaluate-test   # évaluation UNIQUE sur le test (refuse de se relancer)
 python tasks.py explain-global  # importance globale SHAP (validation) -> reports/
 python tasks.py explain --customer-id <ID>  # facteurs de risque d'un client (affichage)
 python tasks.py api             # API FastAPI (http://127.0.0.1:8000/docs)
+python tasks.py ui              # interface Streamlit (http://127.0.0.1:8501), l'API doit tourner
 python tasks.py mlflow-ui       # interface MLflow (http://127.0.0.1:5000)
 python tasks.py test            # tests pytest
 python tasks.py lint            # ruff
@@ -232,10 +295,13 @@ python tasks.py api      # http://127.0.0.1:8000 — documentation interactive :
 
 Le modèle est chargé une seule fois au démarrage (chemin : variable d'environnement
 `CHURNGUARD_MODEL_PATH`, sinon celui de `config.yaml`).
+Si `CHURNGUARD_API_KEY` est définie, toutes les routes sauf `/health` exigent l'en-tête
+`X-API-Key` (erreur 401 sinon).
 
 | Méthode | Route | Rôle |
 |---|---|---|
 | GET | `/health` | état du service, modèle, version, seuil, limites |
+| GET | `/model/info` | performances (validation, test), règle de seuil, importance SHAP |
 | POST | `/predict` | un client → probabilité, décision, niveau de risque, 5 facteurs (SHAP) |
 | POST | `/predict/batch` | plusieurs clients (JSON) ; `include_factors=false` par défaut |
 | POST | `/predict/batch/csv` | fichier CSV au format brut ; `include_factors=false` par défaut |
@@ -269,3 +335,80 @@ Exemple (client fictif, réponse réelle de `POST /predict`) :
 lot de 2 000 clients ≈ 0,3 s sans facteurs, ≈ 17-18 s avec facteurs ; lot de 500 clients avec
 facteurs ≈ 4,6 s. D'où deux limites par lot : **2 000 clients sans facteurs, 500 avec**
 (au-delà : erreur 413).
+
+## Interface (Streamlit)
+
+L'interface appelle l'API (adresse : `API_URL`, clé : `CHURNGUARD_API_KEY`, côté serveur ;
+la clé n'est jamais envoyée au navigateur).
+
+- **Client** : formulaire en français ; les options internet et la ligne multiple se
+  verrouillent automatiquement quand le service correspondant est absent (combinaisons
+  incohérentes impossibles). Résultat : probabilité, niveau de risque (icône + libellé),
+  graphique et liste des 5 facteurs.
+- **Import CSV** : fichier au format brut ; découpé automatiquement en lots dans les limites
+  de l'API ; tableau trié par risque décroissant, téléchargeable ; erreurs affichées avec le
+  numéro de ligne du fichier d'origine.
+- **Analyse** : performances (validation, test), importance globale SHAP, répartition des
+  risques du dernier fichier importé.
+
+## Sécurité
+
+- **Clé d'API** : si `CHURNGUARD_API_KEY` est définie, les routes de prédiction et
+  `/model/info` exigent l'en-tête `X-API-Key` (comparaison à temps constant) ; `/health`
+  reste ouvert. `docker compose` refuse de démarrer sans clé.
+- **API non exposée** : dans `docker-compose.yml`, l'interface joint l'API par le réseau
+  interne (`http://api:8000`) ; les ports ne sont publiés que sur `127.0.0.1`.
+- **Images** : base `python:3.12-slim`, utilisateur non-root, modèle monté en lecture seule,
+  `.env` et données exclus du contexte de construction.
+- **Modèle** : un fichier joblib est un *pickle* (le charger exécute du code) : il n'est
+  installé depuis une release que si son empreinte SHA-256 correspond (voir ci-dessous).
+
+## Stockage du modèle
+
+Le modèle final (`models/churnguard_model.joblib`, 5,5 Mo) et ses métadonnées ne sont pas
+versionnés dans Git. Choix retenu : une **release GitHub** (`model-v1.0.0`) contenant le
+modèle et `metadata.json` ; `python scripts/fetch_model.py` les télécharge et **refuse le
+modèle si son empreinte SHA-256 diffère** de celle enregistrée dans `config.yaml`.
+La release ne sera publiée qu'après confirmation de la licence des données. En local,
+`docker compose` monte `./models` en lecture seule.
+
+## Intégration continue (GitHub Actions)
+
+À chaque push et pull request (`.github/workflows/ci.yml`), **sans Kaggle ni vrai modèle** :
+
+1. **lint** : `ruff check` et `ruff format --check` ;
+2. **tests** : `pytest` (échantillon synthétique et petits modèles entraînés pendant les
+   tests) ; le job vérifie qu'aucune donnée réelle ni aucun modèle n'est présent ;
+3. **docker** : construction des deux images, entraînement d'un modèle de test sur
+   l'échantillon synthétique, puis vérification de l'API en conteneur (santé, refus sans
+   clé, prédiction avec clé) et de l'interface.
+
+Les tests passent aussi dans un clone propre du dépôt, sans `data/` ni `models/`.
+
+## Mesures (images et mémoire)
+
+Mesures locales (Docker Desktop, poste de développement) :
+
+| | API | Interface |
+|---|---|---|
+| Taille de l'image | 685 Mo | 780 Mo |
+| Mémoire au repos | 153 Mo | 52 Mo |
+| Mémoire en pic (lots de 2 000 sans facteurs, 500 avec) | 177 Mo | 63 Mo* |
+
+\* L'interface n'a été sollicitée que par quelques appels, pas par de vrais utilisateurs.
+Dans le conteneur, un lot de 500 clients avec facteurs SHAP prend 11 à 12 s (4,6 s hors
+Docker) : le calcul SHAP dépend fortement du processeur disponible.
+
+## Limites du projet
+
+- **Données** : un jeu public, ancien et de taille modeste (7 043 clients), sans dimension
+  temporelle ; le modèle n'a jamais été confronté à des données d'un vrai opérateur.
+- **Modèle** : trois modèles équivalents à un client près ; probabilités non calibrées
+  (0,10 ne signifie pas « 10 % de chances de partir ») ; pas de suivi de la dérive des
+  données en production.
+- **Explications** : SHAP explique le modèle, pas les causes réelles du départ ; variables
+  corrélées (`tenure` et `TotalCharges`) à lire ensemble.
+- **Coûts** : l'analyse de coût repose sur des montants hypothétiques.
+- **API et interface** : pas de limitation du débit, une seule clé partagée, interface sans
+  authentification propre ; calcul SHAP lent sur de petites machines.
+- **Licence** : à confirmer avant toute publication (dépôt public, release du modèle, démo).
