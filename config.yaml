@@ -41,3 +41,32 @@ columns:
     - Contract
     - PaperlessBilling
     - PaymentMethod
+
+cv:
+  n_splits: 5
+
+search:
+  # Recherche aléatoire d'hyperparamètres : nombre de combinaisons par modèle
+  n_iter: 25
+
+threshold:
+  # Objectif métier : détecter au moins 80 % des départs (rappel), en maximisant la précision
+  target_recall: 0.80
+
+mlflow:
+  # Chemins relatifs à la racine du projet
+  db: mlflow.db
+  artifacts_dir: mlruns
+  experiment: churnguard
+
+model:
+  version: "1.0.0"
+  artifact: models/churnguard_model.joblib
+  metadata: models/metadata.json
+
+# HYPOTHÈSES ILLUSTRATIVES (pas des données réelles de l'opérateur) :
+# montants exprimés en mois de facture mensuelle médiane du train.
+cost_analysis:
+  lost_customer_months: 12   # valeur perdue quand un client part
+  offer_months: 1            # coût d'une offre de fidélisation
+  offer_success_rate: 0.30   # part des clients ciblés qui restent grâce à l'offre

@@ -10,8 +10,10 @@ import argparse
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 PY = sys.executable
+ROOT = Path(__file__).resolve().parent
 
 COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
     "download": (
@@ -40,7 +42,19 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
     ),
     "train-baseline": (
         "Entraîne les baselines et affiche leurs métriques sur la validation",
+        [[PY, "-m", "churnguard.train", "--baseline"]],
+    ),
+    "train": (
+        "Compare les modèles (CV), règle les hyperparamètres, choisit modèle et seuil, sauvegarde",
         [[PY, "-m", "churnguard.train"]],
+    ),
+    "evaluate-test": (
+        "Évalue UNE SEULE FOIS le modèle final sur le test (--force pour forcer)",
+        [[PY, "-m", "churnguard.evaluate"]],
+    ),
+    "mlflow-ui": (
+        "Lance l'interface MLflow sur http://127.0.0.1:5000",
+        [[PY, "-m", "mlflow", "ui", "--backend-store-uri", "sqlite:///mlflow.db"]],
     ),
     "lint": ("Vérifie le style avec ruff", [[PY, "-m", "ruff", "check", "."]]),
     "format": (
@@ -56,11 +70,15 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name, (help_text, _) in COMMANDS.items():
         sub.add_parser(name, help=help_text)
-    args = parser.parse_args()
+    # Les options en plus (ex. --force) sont transmises à la dernière commande.
+    args, extra = parser.parse_known_args()
 
-    for cmd in COMMANDS[args.command][1]:
+    commands = COMMANDS[args.command][1]
+    for i, cmd in enumerate(commands):
+        if i == len(commands) - 1:
+            cmd = cmd + extra
         print(f"$ {' '.join(cmd)}", flush=True)
-        code = subprocess.call(cmd, env={**os.environ, "PYTHONUTF8": "1"})
+        code = subprocess.call(cmd, cwd=ROOT, env={**os.environ, "PYTHONUTF8": "1"})
         if code != 0:
             return code
     return 0
