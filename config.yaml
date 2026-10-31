@@ -70,3 +70,13 @@ cost_analysis:
   lost_customer_months: 12   # valeur perdue quand un client part
   offer_months: 1            # coût d'une offre de fidélisation
   offer_success_rate: 0.30   # part des clients ciblés qui restent grâce à l'offre
+
+# Niveaux de risque (API) : « élevé » = probabilité >= seuil du modèle (clients signalés),
+# lu dans l'artefact. Sous le seuil : « moyen » si probabilité >= medium_from, sinon « faible ».
+# 0.05 : rupture observée sur la VALIDATION (taux de départ 0,8-3,1 % en dessous, ~10-14 %
+# au-dessus) ; voir README.
+risk_levels:
+  medium_from: 0.05
+
+api:
+  max_batch_size: 2000
