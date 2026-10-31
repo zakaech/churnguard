@@ -20,6 +20,10 @@ dependencies = [
     "mlflow",
     "matplotlib",
     "shap",
+    "fastapi",
+    "pydantic",
+    "uvicorn",
+    "python-multipart",
 ]
 
 [tool.setuptools.packages.find]
