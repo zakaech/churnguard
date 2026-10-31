@@ -1,0 +1,33 @@
+{
+  "hypotheses": {
+    "median_monthly_charges": 70.4,
+    "lost_customer_cost": 844.8000000000001,
+    "offer_cost": 70.4,
+    "offer_success_rate": 0.3
+  },
+  "no_action_cost": 315955.2,
+  "chosen_threshold": {
+    "threshold": 0.2711680225059681,
+    "tn": 744,
+    "fp": 291,
+    "fn": 74,
+    "tp": 300,
+    "cost": 281529.60000000003
+  },
+  "threshold_0_5": {
+    "threshold": 0.5,
+    "tn": 946,
+    "fp": 89,
+    "fn": 205,
+    "tp": 169,
+    "cost": 291287.04000000004
+  },
+  "min_cost_threshold": {
+    "threshold": 0.35,
+    "tn": 839,
+    "fp": 196,
+    "fn": 108,
+    "tp": 266,
+    "cost": 281064.96
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "model": "random_forest",
+  "metrics": {
+    "threshold": 0.2711680225059681,
+    "accuracy": 0.7459190915542938,
+    "precision": 0.5136986301369864,
+    "recall": 0.8021390374331551,
+    "f1": 0.6263048016701461,
+    "roc_auc": 0.8444831951225812,
+    "pr_auc": 0.6532530945792044,
+    "confusion_matrix": {
+      "tn": 751,
+      "fp": 284,
+      "fn": 74,
+      "tp": 300
+    }
+  },
+  "cost_analysis": {
+    "hypotheses": {
+      "median_monthly_charges": 70.4,
+      "lost_customer_cost": 844.8000000000001,
+      "offer_cost": 70.4,
+      "offer_success_rate": 0.3
+    },
+    "no_action_cost": 315955.2,
+    "chosen_threshold": {
+      "threshold": 0.2711680225059681,
+      "tn": 751,
+      "fp": 284,
+      "fn": 74,
+      "tp": 300,
+      "cost": 281036.80000000005
+    },
+    "threshold_0_5": {
+      "threshold": 0.5,
+      "tn": 945,
+      "fp": 90,
+      "fn": 193,
+      "tp": 181,
+      "cost": 289160.9600000001
+    },
+    "min_cost_threshold": {
+      "threshold": 0.3,
+      "tn": 776,
+      "fp": 259,
+      "fn": 78,
+      "tp": 296,
+      "cost": 280008.96
+    }
+  }
+}

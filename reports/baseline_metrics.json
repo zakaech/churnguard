@@ -1,0 +1,32 @@
+{
+  "dummy_most_frequent": {
+    "threshold": 0.5,
+    "accuracy": 0.7345635202271115,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "roc_auc": 0.5,
+    "pr_auc": 0.2654364797728886,
+    "confusion_matrix": {
+      "tn": 1035,
+      "fp": 0,
+      "fn": 374,
+      "tp": 0
+    }
+  },
+  "logistic_regression": {
+    "threshold": 0.5,
+    "accuracy": 0.8019872249822569,
+    "precision": 0.6567656765676567,
+    "recall": 0.5320855614973262,
+    "f1": 0.5878877400295421,
+    "roc_auc": 0.8360213387067608,
+    "pr_auc": 0.642114112291427,
+    "confusion_matrix": {
+      "tn": 931,
+      "fp": 104,
+      "fn": 175,
+      "tp": 199
+    }
+  }
+}

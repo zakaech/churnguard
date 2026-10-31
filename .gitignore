@@ -21,9 +21,6 @@ mlruns/
 mlartifacts/
 mlflow.db
 
-# Rapports générés
-reports/*.json
-
 # IDE / OS
 .vscode/
 .idea/
