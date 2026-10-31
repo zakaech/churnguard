@@ -19,8 +19,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install ruff==0.17.3
@@ -30,8 +30,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -54,14 +54,14 @@ jobs:
     env:
       CHURNGUARD_API_KEY: cle-ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Construire les images
         run: |
           docker build -f docker/api.Dockerfile -t churnguard-api:ci .
           docker build -f docker/ui.Dockerfile -t churnguard-ui:ci .
           docker build -f docker/space.Dockerfile -t churnguard-space:ci .
           docker images churnguard-*
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Entraîner un modèle de test (échantillon synthétique)
