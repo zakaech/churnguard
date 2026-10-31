@@ -32,6 +32,7 @@ python tasks.py train           # compare les modèles, règle, choisit modèle 
 python tasks.py evaluate-test   # évaluation UNIQUE sur le test (refuse de se relancer)
 python tasks.py explain-global  # importance globale SHAP (validation) -> reports/
 python tasks.py explain --customer-id <ID>  # facteurs de risque d'un client (affichage)
+python tasks.py api             # API FastAPI (http://127.0.0.1:8000/docs)
 python tasks.py mlflow-ui       # interface MLflow (http://127.0.0.1:5000)
 python tasks.py test            # tests pytest
 python tasks.py lint            # ruff
@@ -202,3 +203,69 @@ Pour un vrai client du jeu de données : `python tasks.py explain --customer-id 
 - Les contributions en points de probabilité sont exactes pour ce Random Forest ; un autre type
   de modèle (par exemple XGBoost, dont les sorties sont en log-odds) demanderait une autre
   approche.
+
+## Niveaux de risque
+
+| Niveau | Règle | Validation : clients | Départs réels |
+|---|---|---|---|
+| **élevé** | probabilité ≥ 0,2712 (seuil du modèle) | 591 | 300 (50,8 %) |
+| **moyen** | 0,05 ≤ probabilité < 0,2712 | 461 | 66 (14,3 %) |
+| **faible** | probabilité < 0,05 | 357 | 8 (2,2 %) |
+
+- « élevé » correspond **exactement** aux clients signalés par le seuil : c'est la même
+  comparaison (probabilité ≥ seuil), et le seuil est lu dans le modèle sauvegardé.
+- La limite 0,05 entre « faible » et « moyen » a été choisie sur la **validation uniquement**
+  (le test n'a pas servi) : sous 0,05, le taux de départ observé est très bas et stable
+  (0,8 à 3,1 % selon la tranche) ; juste au-dessus, il passe à environ 10 % puis reste entre
+  10 et 14 % jusqu'à 0,20. Le groupe « moyen » contient 89 % des départs non signalés par le
+  seuil (66 sur 74) : c'est une cible naturelle pour des actions plus légères.
+- **Limites** : les effectifs par tranche sont petits (63 clients entre 0,05 et 0,08), donc la
+  position exacte de la rupture est approximative ; et les probabilités du Random Forest ne
+  sont pas calibrées (0,10 ne veut pas dire « 10 % de chances de partir »). C'est pourquoi la
+  limite est justifiée par les taux de départ observés, pas par la valeur de la probabilité.
+
+## API (FastAPI)
+
+```bash
+python tasks.py api      # http://127.0.0.1:8000 — documentation interactive : /docs
+```
+
+Le modèle est chargé une seule fois au démarrage (chemin : variable d'environnement
+`CHURNGUARD_MODEL_PATH`, sinon celui de `config.yaml`).
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/health` | état du service, modèle, version, seuil, limites |
+| POST | `/predict` | un client → probabilité, décision, niveau de risque, 5 facteurs (SHAP) |
+| POST | `/predict/batch` | plusieurs clients (JSON) ; `include_factors=false` par défaut |
+| POST | `/predict/batch/csv` | fichier CSV au format brut ; `include_factors=false` par défaut |
+
+**Entrée** : un client au **format brut du fichier Telco** (mêmes colonnes ; `SeniorCitizen` en
+0/1 ; `TotalCharges` peut être vide pour un client d'ancienneté 0). L'API applique le même
+nettoyage que l'entraînement (`clean_features`). Sont refusés (erreur 422) : champ manquant ou
+en trop, modalité inconnue, valeurs hors bornes, `TotalCharges` vide avec une ancienneté > 0,
+et **combinaisons de services incohérentes** (par exemple des options internet sans internet).
+Pour un CSV, les colonnes en trop (comme `Churn`) sont ignorées et listées dans la réponse ;
+une ligne invalide est signalée avec son numéro.
+
+Exemple (client fictif, réponse réelle de `POST /predict`) :
+
+```json
+{
+  "customerID": "FICTIF-A",
+  "churn_probability": 0.757,
+  "churn_predicted": true,
+  "risk_level": "élevé",
+  "threshold": 0.2712,
+  "top_factors": [
+    {"label": "Contrat", "value_label": "au mois", "impact_points": 11.6, "direction": "hausse",
+     "text": "Contrat : au mois — augmente le risque (+11,6 points)"},
+    "… 4 autres facteurs"
+  ]
+}
+```
+
+**Temps de réponse mesurés** (HTTP local, poste de développement) : `/predict` ≈ 0,1 s ;
+lot de 2 000 clients ≈ 0,3 s sans facteurs, ≈ 17-18 s avec facteurs ; lot de 500 clients avec
+facteurs ≈ 4,6 s. D'où deux limites par lot : **2 000 clients sans facteurs, 500 avec**
+(au-delà : erreur 413).
