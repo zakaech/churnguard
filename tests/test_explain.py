@@ -115,3 +115,11 @@ def test_non_random_forest_model_rejected(setup):
     other = dict(artifact, pipeline=build_pipeline("logistic_regression", "none", cfg, y).fit(X, y))
     with pytest.raises(NotImplementedError):
         ChurnExplainer(other)
+
+
+def test_top_factors_batch_matches_single_client(setup):
+    _, _, explainer, val = setup
+    batch = explainer.top_factors_batch(val.head(4), k=5)
+    assert len(batch) == 4
+    for i, factors in enumerate(batch):
+        assert factors == explainer.top_factors(val.iloc[[i]], k=5)

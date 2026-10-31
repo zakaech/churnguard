@@ -139,12 +139,21 @@ class ChurnExplainer:
         row = client.to_frame().T if isinstance(client, pd.Series) else client
         if len(row) != 1:
             raise ValueError("top_factors attend un seul client.")
-        contrib = self.contributions(row).iloc[0]
-        order = contrib.abs().sort_values(ascending=False, kind="stable").index[:k]
-        return [
-            self._factor(feature, row.iloc[0][feature], float(contrib[feature]))
-            for feature in order
-        ]
+        return self.top_factors_batch(row, k=k)[0]
+
+    def top_factors_batch(self, X: pd.DataFrame, k: int = 5) -> list[list[dict[str, Any]]]:
+        """Facteurs principaux de chaque client d'un lot (un seul calcul SHAP pour le lot)."""
+        contributions = self.contributions(X)
+        result = []
+        for (_, values), (_, contrib) in zip(X.iterrows(), contributions.iterrows(), strict=True):
+            order = contrib.abs().sort_values(ascending=False, kind="stable").index[:k]
+            result.append(
+                [
+                    self._factor(feature, values[feature], float(contrib[feature]))
+                    for feature in order
+                ]
+            )
+        return result
 
     def _factor(self, feature: str, value: Any, impact: float) -> dict[str, Any]:
         points = 100 * impact
