@@ -19,7 +19,7 @@ def test_preprocessor_learns_on_train_only(splits, cfg):
     X_val, _ = split_xy(splits["val"], cfg)
     pre = build_preprocessor(cfg).fit(X_train)
 
-    scaler = pre.named_transformers_["num"]
+    scaler = pre.named_transformers_["num"].named_steps["scale"]
     np.testing.assert_allclose(scaler.mean_, X_train[cfg["columns"]["numeric"]].mean())
 
     out_train, out_val = pre.transform(X_train), pre.transform(X_val)
@@ -35,7 +35,20 @@ def test_preprocessor_ignores_unknown_category(splits, cfg):
 
     X_new = X_val.head(1).copy()
     X_new["PaymentMethod"] = "Crypto"
-    assert pre.transform(X_new).shape == (1, pre.transform(X_val).shape[1])
+    with pytest.warns(UserWarning, match="unknown categories"):
+        out = pre.transform(X_new)
+    assert out.shape == (1, pre.transform(X_val).shape[1])
+
+
+def test_preprocessor_imputes_missing_values(splits, cfg):
+    X_train, _ = split_xy(splits["train"], cfg)
+    X_val, _ = split_xy(splits["val"], cfg)
+    pre = build_preprocessor(cfg).fit(X_train)
+
+    X_new = X_val.head(2).copy()
+    X_new.loc[X_new.index[0], "MonthlyCharges"] = np.nan
+    X_new.loc[X_new.index[1], "Contract"] = np.nan
+    assert not np.isnan(pre.transform(X_new)).any()
 
 
 def test_compute_metrics_known_values():
