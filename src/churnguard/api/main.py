@@ -3,19 +3,24 @@
 Lancement : `python tasks.py api` puis http://127.0.0.1:8000/docs (Swagger UI).
 Le modèle est chargé une seule fois au démarrage ; son chemin peut être fourni par la
 variable d'environnement CHURNGUARD_MODEL_PATH (sinon : chemin de config.yaml).
+Si CHURNGUARD_API_KEY est définie, les routes de prédiction exigent l'en-tête X-API-Key.
 """
 
 from __future__ import annotations
 
 import io
+import json
+import logging
 import os
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Security, UploadFile
+from fastapi.security import APIKeyHeader
 from pydantic import ValidationError
 
 from churnguard import __version__
@@ -24,6 +29,7 @@ from churnguard.api.schemas import (
     BatchResponse,
     Customer,
     Health,
+    ModelInfo,
     Prediction,
     SinglePrediction,
 )
@@ -39,6 +45,10 @@ IncludeFactors = Annotated[
     Query(description="Calculer les 5 facteurs principaux (SHAP) de chaque client (plus lent)"),
 ]
 CsvFile = Annotated[UploadFile, File(description="CSV au format brut du fichier Telco")]
+API_KEY_HEADER = APIKeyHeader(
+    name="X-API-Key", auto_error=False, description="Clé d'API (si configurée côté serveur)"
+)
+logger = logging.getLogger("churnguard.api")
 
 
 class ChurnService:
@@ -157,13 +167,44 @@ def parse_csv(content: bytes) -> tuple[list[Customer], list[str]]:
     return customers, ignored
 
 
-def create_app(model_path: str | Path | None = None) -> FastAPI:
-    """Crée l'application ; `model_path` permet aux tests d'injecter un modèle d'essai."""
+def require_api_key(
+    request: Request, key: Annotated[str | None, Security(API_KEY_HEADER)] = None
+) -> None:
+    """Vérifie l'en-tête X-API-Key si une clé est configurée (comparaison à temps constant)."""
+    expected = request.app.state.api_key
+    if not expected:
+        return
+    if key is None or not secrets.compare_digest(key.encode(), expected.encode()):
+        raise HTTPException(
+            status_code=401,
+            detail="Clé d'API manquante ou invalide (en-tête X-API-Key).",
+            headers={"WWW-Authenticate": "APIKey"},
+        )
+
+
+PROTECTED = [Depends(require_api_key)]
+
+
+def load_metadata(model_path: Path) -> dict[str, Any] | None:
+    """Métadonnées du modèle : fichier metadata.json placé à côté de l'artefact."""
+    path = model_path.with_name("metadata.json")
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def create_app(model_path: str | Path | None = None, api_key: str | None = None) -> FastAPI:
+    """Crée l'application.
+
+    `model_path` et `api_key` permettent aux tests d'injecter un modèle et une clé ; sinon
+    ils viennent des variables d'environnement CHURNGUARD_MODEL_PATH et CHURNGUARD_API_KEY.
+    Une clé vide désactive la protection (développement local uniquement).
+    """
     cfg = load_config()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        path = (
+        path = Path(
             model_path
             or os.getenv("CHURNGUARD_MODEL_PATH")
             or resolve_path(cfg["model"]["artifact"])
@@ -174,6 +215,10 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             max_batch_size=cfg["api"]["max_batch_size"],
             max_batch_size_with_factors=cfg["api"]["max_batch_size_with_factors"],
         )
+        app.state.metadata = load_metadata(path)
+        app.state.api_key = api_key if api_key is not None else os.getenv("CHURNGUARD_API_KEY", "")
+        if not app.state.api_key:
+            logger.warning("CHURNGUARD_API_KEY non définie : API NON PROTÉGÉE (usage local).")
         yield
 
     app = FastAPI(
@@ -204,21 +249,48 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             max_batch_size_with_factors=s.max_batch_size_with_factors,
         )
 
-    @app.post("/predict", response_model=SinglePrediction, tags=["prédiction"])
+    @app.get("/model/info", response_model=ModelInfo, tags=["état"], dependencies=PROTECTED)
+    def model_info(request: Request) -> ModelInfo:
+        """Performances (validation, test), règle de seuil et importance globale (SHAP)."""
+        s, meta = service(request), request.app.state.metadata
+        if meta is None:
+            raise HTTPException(status_code=404, detail="Métadonnées du modèle indisponibles.")
+        return ModelInfo(
+            model_name=meta.get("model", s.artifact.get("model_name", "inconnu")),
+            model_version=str(meta.get("version", s.artifact.get("version", "inconnue"))),
+            created_at=meta.get("created_at"),
+            threshold=s.threshold,
+            threshold_rule=meta.get("threshold_rule"),
+            risk_medium_from=s.medium_from,
+            validation_metrics=meta.get("validation_metrics"),
+            test_metrics=meta.get("test_metrics"),
+            global_importance=meta.get("shap_global_importance"),
+        )
+
+    @app.post(
+        "/predict", response_model=SinglePrediction, tags=["prédiction"], dependencies=PROTECTED
+    )
     def predict_one(customer: Customer, request: Request) -> SinglePrediction:
         """Un client : probabilité, décision, niveau de risque et 5 facteurs principaux."""
         s = service(request)
         p = s.predict_customers([customer], include_factors=True)[0]
         return SinglePrediction(**p.model_dump(), threshold=s.threshold)
 
-    @app.post("/predict/batch", response_model=BatchResponse, tags=["prédiction"])
+    @app.post(
+        "/predict/batch", response_model=BatchResponse, tags=["prédiction"], dependencies=PROTECTED
+    )
     def predict_batch(
         batch: BatchRequest, request: Request, include_factors: IncludeFactors = False
     ) -> BatchResponse:
         """Plusieurs clients (JSON) ; résultats dans le même ordre que l'entrée."""
         return service(request).batch_response(batch.customers, include_factors)
 
-    @app.post("/predict/batch/csv", response_model=BatchResponse, tags=["prédiction"])
+    @app.post(
+        "/predict/batch/csv",
+        response_model=BatchResponse,
+        tags=["prédiction"],
+        dependencies=PROTECTED,
+    )
     def predict_batch_csv(
         request: Request,
         file: CsvFile,

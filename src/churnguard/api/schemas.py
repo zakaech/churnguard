@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -177,6 +177,26 @@ class BatchResponse(BaseModel):
         default_factory=list, description="Colonnes du CSV non utilisées (ex. Churn)"
     )
     predictions: list[Prediction]
+
+
+class ImportanceItem(BaseModel):
+    feature: str
+    label: str
+    mean_abs_points: float = Field(description="Impact moyen absolu (points de probabilité)")
+
+
+class ModelInfo(BaseModel):
+    """Informations pour la page d'analyse : performances et importance globale."""
+
+    model_name: str
+    model_version: str
+    created_at: str | None
+    threshold: float
+    threshold_rule: str | None
+    risk_medium_from: float
+    validation_metrics: dict[str, Any] | None
+    test_metrics: dict[str, Any] | None
+    global_importance: list[ImportanceItem] | None
 
 
 class Health(BaseModel):

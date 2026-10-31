@@ -216,7 +216,10 @@ def plot_global_importance(importance: pd.DataFrame, path) -> None:
 
 
 def run_global(cfg: dict[str, Any]) -> pd.DataFrame:
-    """Importance globale sur la validation, enregistrée dans reports/."""
+    """Importance globale sur la validation, enregistrée dans reports/ et dans les métadonnées
+    du modèle (pour l'endpoint /model/info de l'API). Le modèle lui-même n'est pas modifié."""
+    import json
+
     from churnguard.config import resolve_path
     from churnguard.data import get_splits
     from churnguard.predict import load_model
@@ -226,6 +229,14 @@ def run_global(cfg: dict[str, Any]) -> pd.DataFrame:
     reports = resolve_path(cfg["paths"]["reports_dir"])
     importance.to_csv(reports / "shap_global_importance.csv", index=False)
     plot_global_importance(importance, reports / "figures" / "shap_global_importance.png")
+
+    meta_path = resolve_path(cfg["model"]["metadata"])
+    if meta_path.exists():
+        metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+        metadata["shap_global_importance"] = (
+            importance[["feature", "label", "mean_abs_points"]].round(4).to_dict("records")
+        )
+        meta_path.write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
     return importance
 
 
