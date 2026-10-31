@@ -44,11 +44,18 @@ CsvFile = Annotated[UploadFile, File(description="CSV au format brut du fichier 
 class ChurnService:
     """Modèle, seuil et explicateur chargés une fois, partagés par toutes les requêtes."""
 
-    def __init__(self, artifact: dict[str, Any], medium_from: float, max_batch_size: int) -> None:
+    def __init__(
+        self,
+        artifact: dict[str, Any],
+        medium_from: float,
+        max_batch_size: int,
+        max_batch_size_with_factors: int,
+    ) -> None:
         check_risk_bounds(artifact["threshold"], medium_from)
         self.artifact = artifact
         self.medium_from = medium_from
         self.max_batch_size = max_batch_size
+        self.max_batch_size_with_factors = max_batch_size_with_factors
         self.explainer = ChurnExplainer(artifact)
         self.features = artifact["numeric_features"] + artifact["categorical_features"]
 
@@ -85,10 +92,13 @@ class ChurnService:
         include_factors: bool,
         ignored_columns: list[str] | None = None,
     ) -> BatchResponse:
-        if len(customers) > self.max_batch_size:
+        # SHAP coûte environ 9 ms par client : limite plus basse quand les facteurs sont demandés.
+        limit = self.max_batch_size_with_factors if include_factors else self.max_batch_size
+        if len(customers) > limit:
+            hint = " avec include_factors=true" if include_factors else ""
             raise HTTPException(
                 status_code=413,
-                detail=f"Trop de clients : {len(customers)} (maximum {self.max_batch_size}).",
+                detail=f"Trop de clients : {len(customers)} (maximum {limit}{hint}).",
             )
         predictions = self.predict_customers(customers, include_factors)
         counts = {level: 0 for level in RISK_LEVELS}
@@ -162,6 +172,7 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             load_model(path),
             medium_from=cfg["risk_levels"]["medium_from"],
             max_batch_size=cfg["api"]["max_batch_size"],
+            max_batch_size_with_factors=cfg["api"]["max_batch_size_with_factors"],
         )
         yield
 
@@ -190,6 +201,7 @@ def create_app(model_path: str | Path | None = None) -> FastAPI:
             threshold=s.threshold,
             risk_medium_from=s.medium_from,
             max_batch_size=s.max_batch_size,
+            max_batch_size_with_factors=s.max_batch_size_with_factors,
         )
 
     @app.post("/predict", response_model=SinglePrediction, tags=["prédiction"])

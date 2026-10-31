@@ -186,3 +186,4 @@ class Health(BaseModel):
     threshold: float
     risk_medium_from: float
     max_batch_size: int
+    max_batch_size_with_factors: int

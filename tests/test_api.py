@@ -147,12 +147,18 @@ def test_batch_rejects_empty_and_invalid(client):
 
 def test_batch_too_large(client):
     service = client.app.state.service
-    original, service.max_batch_size = service.max_batch_size, 2
+    original = service.max_batch_size, service.max_batch_size_with_factors
+    service.max_batch_size, service.max_batch_size_with_factors = 3, 2
     try:
-        r = client.post("/predict/batch", json={"customers": [customer()] * 3})
+        body = {"customers": [customer()] * 3}
+        assert client.post("/predict/batch", json=body).status_code == 200
+        r = client.post("/predict/batch", params={"include_factors": True}, json=body)
+        assert r.status_code == 413
+        assert "include_factors" in r.json()["detail"]
+        body = {"customers": [customer()] * 4}
+        assert client.post("/predict/batch", json=body).status_code == 413
     finally:
-        service.max_batch_size = original
-    assert r.status_code == 413
+        service.max_batch_size, service.max_batch_size_with_factors = original
 
 
 # --- /predict/batch/csv --------------------------------------------------------------------

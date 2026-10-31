@@ -79,4 +79,5 @@ risk_levels:
   medium_from: 0.05
 
 api:
-  max_batch_size: 2000
+  max_batch_size: 2000               # sans explications (~0,3 s mesuré pour 2 000 clients)
+  max_batch_size_with_factors: 500   # avec SHAP (~17-18 s mesurés pour 2 000 clients)
