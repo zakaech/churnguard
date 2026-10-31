@@ -4,6 +4,7 @@ Ils ne dépendent ni du vrai modèle ni des données Kaggle.
 """
 
 import io
+import json
 
 import joblib
 import pandas as pd
@@ -19,8 +20,11 @@ from churnguard.train import build_pipeline
 SAMPLE = "tests/data/sample.csv"
 
 
+API_KEY = "cle-de-test"
+
+
 @pytest.fixture(scope="module")
-def client(tmp_path_factory):
+def model_path(tmp_path_factory):
     cfg = load_config()
     raw = pd.read_csv(SAMPLE)
     X, y = split_xy(split_data(clean(raw, cfg), cfg)["train"], cfg)
@@ -34,7 +38,31 @@ def client(tmp_path_factory):
     }
     path = tmp_path_factory.mktemp("model") / "model.joblib"
     joblib.dump(artifact, path)
-    with TestClient(create_app(path)) as c:
+    metadata = {
+        "model": "random_forest",
+        "version": "test",
+        "threshold_rule": "règle de test",
+        "validation_metrics": {"precision": 0.5, "recall": 0.8},
+        "test_metrics": None,
+        "shap_global_importance": [
+            {"feature": "Contract", "label": "Contrat", "mean_abs_points": 9.0}
+        ],
+    }
+    path.with_name("metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    return path
+
+
+@pytest.fixture(scope="module")
+def client(model_path):
+    """API sans clé (protection désactivée)."""
+    with TestClient(create_app(model_path, api_key="")) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def protected(model_path):
+    """API protégée par une clé."""
+    with TestClient(create_app(model_path, api_key=API_KEY)) as c:
         yield c
 
 
@@ -207,3 +235,48 @@ def test_csv_unreadable(client):
         "/predict/batch/csv", files={"file": ("s.csv", io.BytesIO(b"\xff\xfe\x00"), "text/csv")}
     )
     assert r.status_code == 422
+
+
+# --- Clé d'API et /model/info ---------------------------------------------------------------
+
+
+def test_model_info(client):
+    r = client.get("/model/info")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["threshold"] == 0.3
+    assert body["validation_metrics"]["recall"] == 0.8
+    assert body["global_importance"][0]["label"] == "Contrat"
+
+
+def test_health_is_open_with_key_configured(protected):
+    assert protected.get("/health").status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("method", "url", "kwargs"),
+    [
+        ("post", "/predict", {"json": EXAMPLE_CUSTOMER}),
+        ("post", "/predict/batch", {"json": {"customers": [EXAMPLE_CUSTOMER]}}),
+        ("get", "/model/info", {}),
+    ],
+)
+def test_protected_routes_require_valid_key(protected, method, url, kwargs):
+    call = getattr(protected, method)
+    assert call(url, **kwargs).status_code == 401
+    assert call(url, headers={"X-API-Key": "mauvaise-cle"}, **kwargs).status_code == 401
+    assert call(url, headers={"X-API-Key": API_KEY}, **kwargs).status_code == 200
+
+
+def test_csv_route_requires_key(protected):
+    files = {"file": ("s.csv", csv_bytes(pd.read_csv(SAMPLE).head(2)), "text/csv")}
+    assert protected.post("/predict/batch/csv", files=files).status_code == 401
+    r = protected.post("/predict/batch/csv", files=files, headers={"X-API-Key": API_KEY})
+    assert r.status_code == 200
+
+
+def test_missing_metadata_gives_404(model_path, tmp_path):
+    lone = tmp_path / "model.joblib"
+    lone.write_bytes(model_path.read_bytes())
+    with TestClient(create_app(lone, api_key="")) as c:
+        assert c.get("/model/info").status_code == 404
