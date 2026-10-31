@@ -1,0 +1,30 @@
+# Environnement
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+kaggle.json
+
+# Données et artefacts (non versionnés)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+models/
+mlruns/
+mlartifacts/
+
+# Rapports générés
+reports/*.json
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

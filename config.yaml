@@ -1,0 +1,43 @@
+# Configuration centrale de ChurnGuard.
+seed: 42
+
+paths:
+  raw_data: data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv
+  processed_dir: data/processed
+  reports_dir: reports
+  models_dir: models
+
+kaggle:
+  dataset: blastchar/telco-customer-churn
+  filename: WA_Fn-UseC_-Telco-Customer-Churn.csv
+
+split:
+  # 60 / 20 / 20, stratifié sur la cible
+  val_size: 0.2
+  test_size: 0.2
+
+columns:
+  id: customerID
+  target: Churn
+  numeric:
+    - tenure
+    - MonthlyCharges
+    - TotalCharges
+  # SeniorCitizen est codé 0/1 : traité comme catégoriel (binaire)
+  categorical:
+    - gender
+    - SeniorCitizen
+    - Partner
+    - Dependents
+    - PhoneService
+    - MultipleLines
+    - InternetService
+    - OnlineSecurity
+    - OnlineBackup
+    - DeviceProtection
+    - TechSupport
+    - StreamingTV
+    - StreamingMovies
+    - Contract
+    - PaperlessBilling
+    - PaymentMethod
