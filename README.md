@@ -66,13 +66,17 @@ flowchart LR
 
 ## Données
 
-- Jeu de données : **Telco Customer Churn** (IBM), disponible sur Kaggle :
-  `blastchar/telco-customer-churn` (7 043 clients, 21 colonnes).
-- Licence : **à compléter** (à vérifier sur la page Kaggle avant publication du dépôt, du
-  modèle ou d'une démo en ligne : le modèle est dérivé des données).
-- Les données ne sont pas versionnées. Les tests et la CI utilisent un échantillon
-  **synthétique** (`tests/data/sample.csv`, généré par `scripts/make_synthetic_sample.py`) :
-  aucune ligne réelle n'est publiée.
+- Source : **Telco Customer Churn** (IBM), publié sur Kaggle :
+  [kaggle.com/datasets/blastchar/telco-customer-churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)
+  (7 043 clients, 21 colonnes).
+- Licence affichée sur Kaggle : [à compléter]
+- **Ce dépôt ne contient aucune donnée réelle.** Le fichier source est téléchargé localement
+  (`python tasks.py download`) et n'est jamais versionné. Les tests et la CI utilisent un
+  échantillon **synthétique** (`tests/data/sample.csv`, 300 clients inventés par
+  `scripts/make_synthetic_sample.py`). Les notebooks et `reports/` ne montrent que des
+  statistiques agrégées et des graphiques ; aucune ligne ni aucun identifiant de client réel
+  n'y figure. Les exemples de clients individuels sont fictifs.
+- Le modèle entraîné, dérivé des données, n'est pas versionné non plus.
 
 ## Installation (développement)
 
@@ -398,6 +402,19 @@ Mesures locales (Docker Desktop, poste de développement) :
 \* L'interface n'a été sollicitée que par quelques appels, pas par de vrais utilisateurs.
 Dans le conteneur, un lot de 500 clients avec facteurs SHAP prend 11 à 12 s (4,6 s hors
 Docker) : le calcul SHAP dépend fortement du processeur disponible.
+
+## Déploiement (préparé, non déployé)
+
+Plateforme retenue : **Hugging Face Spaces** (SDK Docker, matériel gratuit « CPU Basic :
+2 vCPU, 16 GB » selon la page tarifs consultée le 31/10/2026). L'image combinée
+`docker/space.Dockerfile` lance l'API sur `127.0.0.1:8000` (**non joignable depuis
+l'extérieur**, vérifié : connexion refusée depuis un autre conteneur) et l'interface sur le
+seul port exposé (7860). Au démarrage, le modèle est téléchargé depuis la release GitHub et
+**refusé si son SHA-256 ne correspond pas** ; sans release, le conteneur s'arrête avec un
+message clair. Étapes : [deploy/huggingface/README.md](deploy/huggingface/README.md).
+
+Le déploiement attend la confirmation de la licence des données (publication d'une démo et
+du modèle).
 
 ## Limites du projet
 
