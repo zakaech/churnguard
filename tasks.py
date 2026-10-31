@@ -7,12 +7,17 @@ Lancer avec l'interpréteur de l'environnement virtuel activé.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 
 PY = sys.executable
 
 COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
+    "download": (
+        "Télécharge les données Kaggle vers data/raw/",
+        [[PY, "scripts/download_data.py"]],
+    ),
     "lint": ("Vérifie le style avec ruff", [[PY, "-m", "ruff", "check", "."]]),
     "format": (
         "Formate le code avec ruff",
@@ -31,7 +36,7 @@ def main() -> int:
 
     for cmd in COMMANDS[args.command][1]:
         print(f"$ {' '.join(cmd)}", flush=True)
-        code = subprocess.call(cmd)
+        code = subprocess.call(cmd, env={**os.environ, "PYTHONUTF8": "1"})
         if code != 0:
             return code
     return 0
