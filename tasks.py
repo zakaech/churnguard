@@ -52,6 +52,14 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         "Évalue UNE SEULE FOIS le modèle final sur le test (--force pour forcer)",
         [[PY, "-m", "churnguard.evaluate"]],
     ),
+    "explain-global": (
+        "Importance globale SHAP sur la validation (reports/)",
+        [[PY, "-m", "churnguard.explain", "global"]],
+    ),
+    "explain": (
+        "Facteurs de risque d'un client : --customer-id ID [--split test|val|train]",
+        [[PY, "-m", "churnguard.explain", "customer"]],
+    ),
     "mlflow-ui": (
         "Lance l'interface MLflow sur http://127.0.0.1:5000",
         [[PY, "-m", "mlflow", "ui", "--backend-store-uri", "sqlite:///mlflow.db"]],
