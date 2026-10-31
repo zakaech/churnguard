@@ -114,3 +114,23 @@ def test_save_and_load_splits_roundtrip(raw_sample, cfg, tmp_path):
             check_dtype=False,
         )
         assert pd.api.types.is_float_dtype(loaded[name]["TotalCharges"])
+
+
+def test_clean_features_matches_clean_on_features(raw_sample, cfg):
+    from churnguard.data import clean_features
+
+    features = feature_columns(cfg)
+    without_target = raw_sample.drop(columns=["Churn", "customerID"])
+    pd.testing.assert_frame_equal(
+        clean_features(without_target)[features], clean(raw_sample, cfg)[features]
+    )
+
+
+def test_clean_features_accepts_numeric_total_charges_with_missing(raw_sample):
+    from churnguard.data import clean_features
+
+    df = raw_sample.head(3).drop(columns=["Churn"]).copy()
+    df["TotalCharges"] = [10.5, None, 3.0]
+    df["tenure"] = [1, 0, 2]
+    out = clean_features(df)
+    assert out["TotalCharges"].tolist() == [10.5, 0.0, 3.0]

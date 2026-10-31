@@ -18,20 +18,20 @@ def load_raw(path: str | Path) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def clean(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
-    """Nettoie les données brutes et renvoie une copie (le DataFrame d'entrée n'est pas modifié).
+def clean_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Nettoie les variables explicatives au format brut et renvoie une copie.
+
+    Utilisé à l'entraînement (via `clean`) et par l'API : un seul code de préparation
+    évite tout écart entre les données d'entraînement et celles reçues en production.
 
     - TotalCharges : texte -> nombre. Les valeurs vides ne concernent que des clients
       d'ancienneté 0 (jamais facturés) et sont mises à 0. Toute autre valeur non numérique
       lève une erreur plutôt que d'être masquée.
     - SeniorCitizen : 0/1 -> "No"/"Yes", pour être codé comme les autres variables binaires.
-    - Churn : "Yes"/"No" -> 1/0.
 
     Ces règles s'appliquent ligne par ligne, sans statistique apprise sur les données :
     elles ne créent donc pas de fuite et peuvent être faites avant le découpage.
     """
-    cols = cfg["columns"]
-    target = cols["target"]
     out = df.copy()
 
     total = out["TotalCharges"].astype("string").str.strip()
@@ -44,6 +44,19 @@ def clean(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
     if not senior.isin([0, 1]).all():
         raise ValueError("SeniorCitizen contient des valeurs autres que 0/1.")
     out["SeniorCitizen"] = senior.map({0: "No", 1: "Yes"}).astype(str)
+    return out
+
+
+def clean(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
+    """Nettoie les données brutes (variables, cible, identifiant) et renvoie une copie.
+
+    - Variables : voir `clean_features`.
+    - Churn : "Yes"/"No" -> 1/0.
+    - customerID : doublons interdits.
+    """
+    cols = cfg["columns"]
+    target = cols["target"]
+    out = clean_features(df)
 
     churn = out[target]
     if not churn.isin(["Yes", "No"]).all():
