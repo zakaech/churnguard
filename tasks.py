@@ -22,6 +22,22 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         "Nettoie et découpe les données vers data/processed/",
         [[PY, "-m", "churnguard.data"]],
     ),
+    "notebook": (
+        "Ré-exécute le notebook d'exploration (sorties régénérées)",
+        [
+            [
+                PY,
+                "-m",
+                "jupyter",
+                "nbconvert",
+                "--to",
+                "notebook",
+                "--execute",
+                "--inplace",
+                "notebooks/01_exploration.ipynb",
+            ],
+        ],
+    ),
     "lint": ("Vérifie le style avec ruff", [[PY, "-m", "ruff", "check", "."]]),
     "format": (
         "Formate le code avec ruff",
