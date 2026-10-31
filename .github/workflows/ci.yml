@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -28,7 +28,7 @@ jobs:
       - run: ruff format --check .
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -49,7 +49,7 @@ jobs:
       - run: pytest
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: test
     env:
       CHURNGUARD_API_KEY: cle-ci
