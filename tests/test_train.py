@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import pytest
 
+from churnguard import train as train_module
 from churnguard.data import clean, split_data, split_xy
 from churnguard.evaluate import evaluate_on_test
 from churnguard.predict import load_model, predict, predict_proba
@@ -13,7 +14,9 @@ from churnguard.train import (
     MODELS,
     STRATEGIES,
     build_pipeline,
+    check_final_model_not_tested,
     cross_validate_pipeline,
+    run_experiments,
     search_cv_metrics,
     search_hyperparameters,
 )
@@ -95,6 +98,30 @@ def test_saved_model_roundtrip(data, cfg, tmp_path):
     assert loaded["threshold"] == 0.3
     out = predict(loaded, X_val)
     assert (out["churn_predicted"] == (out["churn_probability"] >= 0.3)).all()
+
+
+def test_training_refuses_to_overwrite_tested_model(cfg, tmp_path, monkeypatch):
+    guarded = copy.deepcopy(cfg)
+    guarded["paths"]["reports_dir"] = str(tmp_path)
+    (tmp_path / "test_metrics.json").write_text("{}", encoding="utf-8")
+
+    # Le refus doit intervenir avant tout chargement de données ou entraînement.
+    def fail(*args, **kwargs):
+        raise AssertionError("les données ne doivent pas être chargées")
+
+    monkeypatch.setattr(train_module, "get_splits", fail)
+    with pytest.raises(RuntimeError, match="obsolètes"):
+        run_experiments(guarded)
+
+
+def test_training_guard_allows_force_and_untested_model(cfg, tmp_path, capsys):
+    guarded = copy.deepcopy(cfg)
+    guarded["paths"]["reports_dir"] = str(tmp_path)
+    check_final_model_not_tested(guarded)  # pas de rapport de test : rien à protéger
+
+    (tmp_path / "test_metrics.json").write_text("{}", encoding="utf-8")
+    check_final_model_not_tested(guarded, force=True)
+    assert "obsolètes" in capsys.readouterr().out
 
 
 def test_test_evaluation_refuses_second_run(cfg, tmp_path):

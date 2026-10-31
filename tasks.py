@@ -45,7 +45,7 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         [[PY, "-m", "churnguard.train", "--baseline"]],
     ),
     "train": (
-        "Compare les modèles (CV), règle les hyperparamètres, choisit modèle et seuil, sauvegarde",
+        "Compare, règle, choisit modèle et seuil, sauvegarde (refusé si le test a été évalué)",
         [[PY, "-m", "churnguard.train"]],
     ),
     "evaluate-test": (

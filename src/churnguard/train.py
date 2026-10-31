@@ -248,9 +248,29 @@ def train_baselines(
     return results
 
 
-def run_experiments(cfg: dict[str, Any] | None = None) -> dict[str, Any]:
+def check_final_model_not_tested(cfg: dict[str, Any], force: bool = False) -> None:
+    """Refuse de réentraîner si le modèle final a déjà été évalué sur le test.
+
+    Un nouvel entraînement remplacerait le modèle et son seuil : les métriques de test
+    existantes ne correspondraient plus au modèle sauvegardé.
+    """
+    test_report = resolve_path(cfg["paths"]["reports_dir"]) / "test_metrics.json"
+    if not test_report.exists():
+        return
+    message = (
+        f"Le modèle final a déjà été évalué sur le test ({test_report}). "
+        "Un nouvel entraînement remplacerait le modèle et son seuil : ces métriques de test "
+        "deviendraient obsolètes, et le test ne pourrait plus être réévalué honnêtement."
+    )
+    if not force:
+        raise RuntimeError(message + " Utiliser --force seulement en connaissance de cause.")
+    print(f"ATTENTION (--force) : {message}", flush=True)
+
+
+def run_experiments(cfg: dict[str, Any] | None = None, force: bool = False) -> dict[str, Any]:
     """Étapes A à D : comparaison en CV, recherche, choix sur la validation, sauvegarde."""
     cfg = cfg or load_config()
+    check_final_model_not_tested(cfg, force=force)
     target_recall = cfg["threshold"]["target_recall"]
     splits = get_splits(cfg)
     X_train, y_train = split_xy(splits["train"], cfg)
@@ -469,7 +489,7 @@ def main() -> None:
     if "--baseline" in sys.argv:
         main_baseline()
     else:
-        run_experiments()
+        run_experiments(force="--force" in sys.argv)
 
 
 if __name__ == "__main__":
