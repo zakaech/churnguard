@@ -13,6 +13,12 @@ dependencies = [
     "scikit-learn",
     "pyyaml",
     "python-dotenv",
+    "scipy",
+    "imbalanced-learn",
+    "xgboost",
+    "joblib",
+    "mlflow",
+    "matplotlib",
 ]
 
 [tool.setuptools.packages.find]

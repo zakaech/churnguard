@@ -19,6 +19,7 @@ data/processed/*
 models/
 mlruns/
 mlartifacts/
+mlflow.db
 
 # Rapports générés
 reports/*.json
