@@ -8,6 +8,7 @@ imbalanced-learn==0.14.2
 xgboost==3.4.1
 joblib==1.6.0
 mlflow==3.17.2
+shap==0.54.1
 matplotlib==3.11.2
 PyYAML==6.0.3
 python-dotenv==1.2.4
