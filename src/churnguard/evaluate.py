@@ -192,7 +192,7 @@ def plot_threshold_analysis(
         f"seuil {chosen['threshold']:.3f}\nP = {chosen['precision']:.2f}, "
         f"R = {chosen['recall']:.2f}",
         (chosen["recall"], chosen["precision"]),
-        xytext=(-130, 30),
+        xytext=(-150, -70),
         textcoords="offset points",
         fontsize=9,
         arrowprops={"arrowstyle": "-", "color": MUTED},
