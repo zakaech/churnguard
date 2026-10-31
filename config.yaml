@@ -63,6 +63,12 @@ model:
   version: "1.0.0"
   artifact: models/churnguard_model.joblib
   metadata: models/metadata.json
+  # Release GitHub (option B) : publiée seulement après confirmation de la licence.
+  # sha256 = empreinte du modèle évalué sur le test ; fetch_model.py la vérifie.
+  release:
+    repo: zakaech/churnguard
+    tag: model-v1.0.0
+    sha256: "871527ac90f0cc2393850df1f54dd05e97fa863d8f020f6ed6dd740f3324e08d"
 
 # HYPOTHÈSES ILLUSTRATIVES (pas des données réelles de l'opérateur) :
 # montants exprimés en mois de facture mensuelle médiane du train.
