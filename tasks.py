@@ -18,6 +18,10 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         "Télécharge les données Kaggle vers data/raw/",
         [[PY, "scripts/download_data.py"]],
     ),
+    "data": (
+        "Nettoie et découpe les données vers data/processed/",
+        [[PY, "-m", "churnguard.data"]],
+    ),
     "lint": ("Vérifie le style avec ruff", [[PY, "-m", "ruff", "check", "."]]),
     "format": (
         "Formate le code avec ruff",
