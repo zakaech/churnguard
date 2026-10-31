@@ -25,19 +25,10 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         [[PY, "-m", "churnguard.data"]],
     ),
     "notebook": (
-        "Ré-exécute le notebook d'exploration (sorties régénérées)",
+        "Ré-exécute les notebooks (exploration, résultats) : sorties régénérées",
         [
-            [
-                PY,
-                "-m",
-                "jupyter",
-                "nbconvert",
-                "--to",
-                "notebook",
-                "--execute",
-                "--inplace",
-                "notebooks/01_exploration.ipynb",
-            ],
+            [PY, "-m", "jupyter", "nbconvert", "--to", "notebook", "--execute", "--inplace", nb]
+            for nb in ("notebooks/01_exploration.ipynb", "notebooks/02_resultats.ipynb")
         ],
     ),
     "train-baseline": (
