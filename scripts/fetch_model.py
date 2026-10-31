@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -85,7 +86,16 @@ def main() -> int:
     cfg = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
     release = cfg["model"]["release"]
     token = os.getenv("GITHUB_TOKEN")
-    urls = asset_urls(release["repo"], release["tag"], token)
+    try:
+        urls = asset_urls(release["repo"], release["tag"], token)
+    except urllib.error.HTTPError as e:
+        hint = "" if token else " ; dépôt privé : définir GITHUB_TOKEN"
+        print(
+            f"Release {release['tag']} introuvable sur {release['repo']} (HTTP {e.code}) : "
+            f"pas encore publiée{hint}.",
+            file=sys.stderr,
+        )
+        return 1
     for name in ("churnguard_model.joblib", "metadata.json"):
         if name not in urls:
             print(f"Fichier {name} absent de la release {release['tag']}.", file=sys.stderr)

@@ -59,6 +59,7 @@ jobs:
         run: |
           docker build -f docker/api.Dockerfile -t churnguard-api:ci .
           docker build -f docker/ui.Dockerfile -t churnguard-ui:ci .
+          docker build -f docker/space.Dockerfile -t churnguard-space:ci .
           docker images churnguard-*
       - uses: actions/setup-python@v5
         with:
