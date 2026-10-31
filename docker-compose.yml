@@ -1,0 +1,47 @@
+# ChurnGuard : API + interface (+ MLflow en option).
+#   cp .env.example .env    puis définir CHURNGUARD_API_KEY
+#   docker compose up --build
+#   docker compose --profile mlflow up --build      (avec l'interface MLflow)
+# Le modèle est monté en lecture seule depuis ./models (non copié dans l'image).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    image: churnguard-api:local
+    environment:
+      CHURNGUARD_API_KEY: ${CHURNGUARD_API_KEY:?Définir CHURNGUARD_API_KEY dans .env (voir .env.example)}
+    volumes:
+      - ./models:/app/models:ro
+    # Port publié sur la machine locale uniquement (Swagger : http://127.0.0.1:8000/docs).
+    # L'interface joint l'API par le réseau interne : http://api:8000.
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    image: churnguard-ui:local
+    environment:
+      API_URL: http://api:8000
+      CHURNGUARD_API_KEY: ${CHURNGUARD_API_KEY}
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mlflow:
+    profiles: ["mlflow"]
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    image: churnguard-mlflow:local
+    volumes:
+      - ./mlflow.db:/mlflow/mlflow.db
+    ports:
+      - "127.0.0.1:5000:5000"

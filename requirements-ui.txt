@@ -1,0 +1,5 @@
+# Dépendances de l'image de l'interface (elle appelle l'API et ne charge pas le modèle).
+streamlit==1.66.1
+altair==6.3.0
+httpx==0.28.1
+pandas==3.1.0

@@ -1,0 +1,14 @@
+# Dépendances de l'image de l'API (sans entraînement, MLflow, notebooks ni Kaggle).
+# Installées avec -c constraints.txt pour figer aussi les dépendances indirectes.
+numpy==2.5.4
+pandas==3.1.0
+scipy==1.18.1
+scikit-learn==1.9.1
+imbalanced-learn==0.14.2
+joblib==1.6.0
+shap==0.54.1
+fastapi==0.162.0
+pydantic==2.14.2
+uvicorn==0.54.0
+python-multipart==0.0.33
+PyYAML==6.0.3
