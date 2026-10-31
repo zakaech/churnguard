@@ -26,10 +26,12 @@ pip install -e .
 ```bash
 python tasks.py download        # télécharge les données (API Kaggle, ou instructions manuelles)
 python tasks.py data            # nettoie et découpe (train/val/test) vers data/processed/
-python tasks.py notebook        # ré-exécute le notebook d'exploration
+python tasks.py notebook        # ré-exécute les notebooks (exploration, résultats)
 python tasks.py train-baseline  # entraîne les baselines, métriques sur la validation
 python tasks.py train           # compare les modèles, règle, choisit modèle + seuil, sauvegarde
 python tasks.py evaluate-test   # évaluation UNIQUE sur le test (refuse de se relancer)
+python tasks.py explain-global  # importance globale SHAP (validation) -> reports/
+python tasks.py explain --customer-id <ID>  # facteurs de risque d'un client (affichage)
 python tasks.py mlflow-ui       # interface MLflow (http://127.0.0.1:5000)
 python tasks.py test            # tests pytest
 python tasks.py lint            # ruff
@@ -149,3 +151,54 @@ Avec ces hypothèses, la courbe de coût est presque plate entre les seuils 0,25
 seuil fixé par le rappel cible est à 0,2 % (validation) du coût minimal, alors que le seuil
 0,5 coûte nettement plus. Avec d'autres hypothèses (coût de l'offre, taux de succès), le
 seuil optimal changerait : c'est un paramètre à fixer avec le métier.
+
+## Explicabilité (SHAP)
+
+Pour chaque client, **SHAP** répartit l'écart entre sa probabilité de départ et la probabilité
+moyenne (0,265) entre les variables. Avec ce Random Forest, les contributions sont exprimées en
+**points de probabilité** et s'additionnent exactement (valeur de base + somme des contributions
+= probabilité prédite ; écart maximal mesuré de l'ordre de 10⁻¹⁵). Les colonnes one-hot d'une
+même variable sont regroupées pour revenir aux 19 variables d'origine.
+
+### Importance globale (validation)
+
+![Importance globale SHAP](reports/figures/shap_global_importance.png)
+
+- **Le contrat domine** (9,4 points d'impact moyen) : le contrat au mois ajoute en moyenne
+  9,8 points au risque, le contrat de deux ans en retire 10,6.
+- Suivent le type d'internet (5,2), l'ancienneté (5,2), les options sécurité en ligne (4,2) et
+  support technique (3,0), puis les montants facturés (2,6 chacun).
+- L'ancienneté augmente fortement le risque pendant les 6 premiers mois (+9,2 points en
+  moyenne) et le diminue au-delà de 18 mois ; une facture mensuelle supérieure à 80 l'augmente.
+- Les variables démographiques (genre, couple, senior, personnes à charge) pèsent moins de
+  0,3 point en moyenne.
+
+Le détail (beeswarm, courbes de dépendance, graphiques waterfall) est dans
+[notebooks/02_resultats.ipynb](notebooks/02_resultats.ipynb).
+
+### Explication d'un client
+
+`ChurnExplainer.top_factors` renvoie les **5 facteurs les plus importants, dans les deux sens**,
+avec l'impact en points de probabilité. Exemple sur un **client fictif** (contrat au mois,
+2 mois d'ancienneté, fibre, chèque électronique) :
+
+```
+FICTIF-A — probabilité 75,7 % -> signalé (seuil 27,1 %)
+  1. Contrat : au mois — augmente le risque (+11,6 points)
+  2. Ancienneté : 2 mois — augmente le risque (+9,2 points)
+  3. Type d'internet : fibre optique — augmente le risque (+7,2 points)
+  4. Option sécurité en ligne : non — augmente le risque (+5,8 points)
+  5. Total facturé depuis le début : 171,00 — augmente le risque (+4,2 points)
+```
+
+Pour un vrai client du jeu de données : `python tasks.py explain --customer-id <ID> --split test`
+(sortie affichée seulement, rien n'est enregistré).
+
+### Limites
+
+- SHAP explique **le modèle**, pas la réalité : aucune lecture causale.
+- `tenure` et `TotalCharges` sont très corrélées (Spearman 0,90) : le modèle peut répartir leur
+  effet entre les deux de façon arbitraire ; il faut les lire ensemble.
+- Les contributions en points de probabilité sont exactes pour ce Random Forest ; un autre type
+  de modèle (par exemple XGBoost, dont les sorties sont en log-odds) demanderait une autre
+  approche.
