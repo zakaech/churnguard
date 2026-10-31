@@ -24,6 +24,8 @@ dependencies = [
     "pydantic",
     "uvicorn",
     "python-multipart",
+    "streamlit",
+    "httpx",
 ]
 
 [tool.setuptools.packages.find]

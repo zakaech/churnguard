@@ -55,6 +55,10 @@ COMMANDS: dict[str, tuple[str, list[list[str]]]] = {
         "Lance l'API sur http://127.0.0.1:8000 (Swagger UI : /docs)",
         [[PY, "-m", "uvicorn", "churnguard.api.main:app", "--host", "127.0.0.1", "--port", "8000"]],
     ),
+    "ui": (
+        "Lance l'interface Streamlit sur http://127.0.0.1:8501 (l'API doit tourner)",
+        [[PY, "-m", "streamlit", "run", "src/churnguard/ui/app.py", "--server.port", "8501"]],
+    ),
     "mlflow-ui": (
         "Lance l'interface MLflow sur http://127.0.0.1:5000",
         [[PY, "-m", "mlflow", "ui", "--backend-store-uri", "sqlite:///mlflow.db"]],
