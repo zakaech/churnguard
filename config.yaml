@@ -63,7 +63,7 @@ model:
   version: "1.0.0"
   artifact: models/churnguard_model.joblib
   metadata: models/metadata.json
-  # Release GitHub (option B) : publiée seulement après confirmation de la licence.
+  # Release GitHub du modèle : publiée seulement après confirmation de la licence des données.
   # sha256 = empreinte du modèle évalué sur le test ; fetch_model.py la vérifie.
   release:
     repo: zakaech/churnguard

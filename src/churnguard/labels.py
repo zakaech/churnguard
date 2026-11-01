@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 from typing import Any
 
-# Libellés lisibles par un non-technicien.
 FEATURE_LABELS: dict[str, str] = {
     "tenure": "Ancienneté",
     "MonthlyCharges": "Facture mensuelle",
