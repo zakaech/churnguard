@@ -60,11 +60,15 @@ flowchart LR
 
 ## Captures d'écran
 
-> Emplacements prévus — captures à ajouter (dossier `docs/screenshots/`).
+Réalisées avec un client fictif et l'échantillon synthétique (`tests/data/sample.csv`).
 
-| Page « Client » | Page « Import CSV » | Page « Analyse » | Swagger UI |
-|---|---|---|---|
-| `docs/screenshots/client.png` | `docs/screenshots/import_csv.png` | `docs/screenshots/analyse.png` | `docs/screenshots/swagger.png` |
+| Page « Client » | Page « Import CSV » |
+|---|---|
+| [![Page Client](docs/screenshots/client.png)](docs/screenshots/client.png) | [![Page Import CSV](docs/screenshots/import_csv.png)](docs/screenshots/import_csv.png) |
+
+| Page « Analyse » | Swagger UI |
+|---|---|
+| [![Page Analyse](docs/screenshots/analyse.png)](docs/screenshots/analyse.png) | [![Swagger UI](docs/screenshots/swagger.png)](docs/screenshots/swagger.png) |
 
 ## Données
 
