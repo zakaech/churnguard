@@ -71,7 +71,9 @@ flowchart LR
 - Source : **Telco Customer Churn** (IBM), publié sur Kaggle :
   [kaggle.com/datasets/blastchar/telco-customer-churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)
   (7 043 clients, 21 colonnes).
-- Licence affichée sur Kaggle : [à compléter]
+- Licence affichée sur la page Kaggle : « Data files © Original Authors » (relevé le
+  5 novembre 2026). La page ne précise rien sur la redistribution des données ni sur la
+  publication d'un modèle dérivé.
 - **Ce dépôt ne contient aucune donnée réelle.** Le fichier source est téléchargé localement
   (`python tasks.py download`) et n'est jamais versionné. Les tests et la CI utilisent un
   échantillon **synthétique** (`tests/data/sample.csv`, 300 clients inventés par
@@ -375,7 +377,8 @@ Le modèle final (`models/churnguard_model.joblib`, 5,5 Mo) et ses métadonnées
 versionnés dans Git. Choix retenu : une **release GitHub** (`model-v1.0.0`) contenant le
 modèle et `metadata.json` ; `python scripts/fetch_model.py` les télécharge et **refuse le
 modèle si son empreinte SHA-256 diffère** de celle enregistrée dans `config.yaml`.
-La release ne sera publiée qu'après confirmation de la licence des données. En local,
+La release n'est pas publiée : la licence affichée ne précise pas si un modèle dérivé peut
+être diffusé. En local,
 `docker compose` monte `./models` en lecture seule.
 
 ## Intégration continue (GitHub Actions)
@@ -415,8 +418,8 @@ seul port exposé (7860). Au démarrage, le modèle est téléchargé depuis la 
 **refusé si son SHA-256 ne correspond pas** ; sans release, le conteneur s'arrête avec un
 message clair. Étapes : [deploy/huggingface/README.md](deploy/huggingface/README.md).
 
-Le déploiement attend la confirmation de la licence des données (publication d'une démo et
-du modèle).
+Le déploiement n'est pas effectué : la licence affichée ne précise pas si une démo et un
+modèle dérivés des données peuvent être publiés.
 
 ## Limites du projet
 
@@ -430,4 +433,5 @@ du modèle).
 - **Coûts** : l'analyse de coût repose sur des montants hypothétiques.
 - **API et interface** : pas de limitation du débit, une seule clé partagée, interface sans
   authentification propre ; calcul SHAP lent sur de petites machines.
-- **Licence** : à confirmer avant toute publication (dépôt public, release du modèle, démo).
+- **Licence** : la page Kaggle affiche « Data files © Original Authors », sans préciser la
+  redistribution ni les modèles dérivés ; le modèle et une démo ne sont donc pas publiés.
