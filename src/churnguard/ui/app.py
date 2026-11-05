@@ -22,6 +22,7 @@ from churnguard.ui.client import (
 )
 
 BLUE, ORANGE = "#2a78d6", "#eb6834"
+FULL_LABELS = alt.Axis(labelLimit=0)  # 0 : pas de troncature des libellés de l'axe
 RISK_DISPLAY = {
     "élevé": ("🔴", "Risque élevé", st.error),
     "moyen": ("🟠", "Risque moyen", st.warning),
@@ -86,7 +87,7 @@ def factors_chart(factors: list[dict]) -> alt.Chart:
         .mark_bar(cornerRadiusEnd=4, height=18)
         .encode(
             x=alt.X("impact:Q", title="impact sur la probabilité (points)"),
-            y=alt.Y("facteur:N", sort=None, title=None),
+            y=alt.Y("facteur:N", sort=None, title=None, axis=FULL_LABELS),
             color=alt.Color(
                 "sens:N",
                 scale=alt.Scale(
@@ -208,8 +209,13 @@ def page_csv(client: ApiClient, health: dict) -> None:
     dist = risk_distribution(batch["predictions"])
     for col, row in zip(st.columns(3), dist.itertuples(), strict=True):
         icon, title, _ = RISK_DISPLAY[row.niveau_risque]
-        col.metric(f"{icon} {title}", f"{row.clients}", f"{format_number(100 * row.part, 1)} %",
-                   delta_color="off")  # fmt: skip
+        col.metric(
+            f"{icon} {title}",
+            f"{row.clients}",
+            f"{format_number(100 * row.part, 1)} %",
+            delta_color="off",
+            delta_arrow="off",
+        )
     table = results_table(batch["predictions"])
     st.dataframe(table, width="stretch", hide_index=True)
     st.download_button(
@@ -260,7 +266,7 @@ def page_analysis(client: ApiClient) -> None:
             .mark_bar(color=BLUE, cornerRadiusEnd=4, height=14)
             .encode(
                 x=alt.X("mean_abs_points:Q", title="impact moyen (points de probabilité)"),
-                y=alt.Y("label:N", sort="-x", title=None),
+                y=alt.Y("label:N", sort="-x", title=None, axis=FULL_LABELS),
                 tooltip=["label", alt.Tooltip("mean_abs_points:Q", format=".1f")],
             )
         )
